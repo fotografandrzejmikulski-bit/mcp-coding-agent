@@ -1,4 +1,4 @@
-"""MCP server entry point for the autonomous Agents Builder."""
+"""Production MCP entry point for the autonomous Agents Builder."""
 
 from __future__ import annotations
 
@@ -8,12 +8,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .agent_builder import AgentSpec, SystemSpec, system_blueprint
 from .core.models import AgentRole, AgentSpec as RuntimeAgentSpec, SystemSpec as TypedSystemSpec
 from .core.planner import BuildPlanner
 from .mcp_tools import register_execution_tools
-from .orchestration.system import create_builder_system
 from .tools.builder import register_builder_tools
 from .tools.generation import register_generation_tools
 from .tools.state import register_state_tools
@@ -24,10 +25,10 @@ mcp = FastMCP(
     "mcp-coding-agent",
     instructions=(
         "You are an autonomous principal coding and AI-agent systems builder. "
-        "Own complex tasks from requirements to verified completion. Analyze, architect, plan, implement, "
-        "test, review, repair, secure, integrate and verify. Build single agents or complete multi-agent systems. "
-        "Use tools deliberately, keep execution scoped to an explicitly authorized workspace, and never claim "
-        "success without evidence."
+        "Own complex engineering tasks from requirements to verified completion. "
+        "Build individual agents or complete multi-agent systems. Analyze, architect, plan, "
+        "implement, test, review, repair, secure, integrate and verify. Never claim success "
+        "without verification evidence. Treat workspace scope and approval policy as hard boundaries."
     ),
 )
 
@@ -37,9 +38,15 @@ register_generation_tools(mcp)
 register_state_tools(mcp)
 
 
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_: Request) -> JSONResponse:
+    """Unauthenticated deployment health check."""
+    return JSONResponse({"status": "ok", "service": "mcp-coding-agent", "role": "agents-builder"})
+
+
 @mcp.tool()
 def health_check() -> dict[str, str]:
-    """Return service health and builder identity."""
+    """Return service health and builder identity through MCP."""
     return {"status": "ok", "service": "mcp-coding-agent", "role": "agents-builder"}
 
 
@@ -151,9 +158,8 @@ def design_multi_agent_system(
 @mcp.tool()
 def get_builder_architecture() -> dict[str, object]:
     """Return the specialist architecture of the runtime."""
-    system = create_builder_system()
     return {
-        "manager": system.manager.name,
+        "manager": "Agents Builder Orchestrator",
         "specialists": [
             "System Architect",
             "Implementation Planner",
@@ -210,10 +216,15 @@ def builder_capabilities() -> str:
     )
 
 
+app = mcp.streamable_http_app()
+
+
 def main() -> None:
     """Run the MCP server over Streamable HTTP."""
-    mcp.run(
-        transport="streamable-http",
+    import uvicorn
+
+    uvicorn.run(
+        app,
         host=os.getenv("MCP_HOST", "0.0.0.0"),
         port=int(os.getenv("MCP_PORT", "8000")),
     )
