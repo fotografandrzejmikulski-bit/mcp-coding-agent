@@ -1,13 +1,10 @@
 # MCP Coding Agent — Autonomous Agents Builder
 
-An autonomous AI engineering system exposed through Model Context Protocol (MCP).
-It is designed to build production software, individual agents, and complete multi-agent systems.
+Autonomous AI engineering system exposed through Model Context Protocol (MCP). The Builder is designed to create production software, individual agents, and complete multi-agent systems.
 
 ## Architecture
 
-The runtime uses a manager-style orchestrator with specialist agents for architecture, planning, coding,
-review, QA, debugging, security, and DevOps. The OpenAI Agents SDK provides the agent runtime and
-agent-as-tools orchestration; MCP provides interoperability with MCP hosts.
+The runtime uses a manager-style orchestrator with specialist agents for architecture, planning, coding, review, QA, debugging, security, and DevOps. The OpenAI Agents SDK provides the agent runtime and agent-as-tools orchestration; MCP provides interoperability with MCP hosts. citeturn601879search1turn601879search5
 
 ## Core lifecycle
 
@@ -50,9 +47,11 @@ agent-as-tools orchestration; MCP provides interoperability with MCP hosts.
 - `builder://capabilities`
 - `builder://tool-policy`
 
-## Development
+## MCP server
 
-Requires Python 3.10+.
+The server uses **Streamable HTTP**. The official MCP Python SDK exposes this transport as an ASGI application; the standard endpoint is `/mcp`. A separate `/health` route is provided for deployment health checks. citeturn601879search6
+
+Run locally:
 
 ```bash
 python -m venv .venv
@@ -63,18 +62,34 @@ ruff check src tests
 mcp-coding-agent
 ```
 
-Set `OPENAI_API_KEY` when running the Agents SDK runtime. MCP clients connect to the configured Streamable HTTP endpoint.
+The default local endpoint is:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+Health check:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+Set `OPENAI_API_KEY` when running the Agents SDK runtime. OpenAI documents `openai-agents` as the installation package and `OPENAI_API_KEY` as the default credential path. citeturn601879search0turn601879search8
 
 ## Security boundary
 
-Workspace operations require an explicit project root and prevent path traversal. Command execution is
-bounded and strips the OpenAI API key from child processes. Production deployment should additionally use
-isolated containers/sandboxes, narrow command allowlists, authentication, secret management, resource limits,
-and audited write paths.
+Workspace operations require an explicit project root and prevent path traversal. Command execution is bounded, blocks high-risk binaries, and strips major cloud/API credentials from child-process environments. Production deployment should additionally use isolated containers/sandboxes, narrow command allowlists, secret management, resource limits, authentication, audited write paths, and explicit approval for consequential operations.
 
-## Current repository state
+For real code-generation work in isolated environments, the current OpenAI Agents SDK also provides Sandbox Agents and Docker-backed sandbox execution. citeturn601879search2
 
-The repository now contains the first complete architectural slice of the autonomous Agents Builder:
+## Deployment
+
+A Dockerfile and `railway.json` are included. The container listens on port `8000` and exposes `/health` for deployment health checks.
+
+## Current state
+
+The repository contains the core executable architecture of the autonomous Agents Builder:
+
 - typed agent/system contracts;
 - specialist-agent library;
 - manager-style orchestration with agents-as-tools;
@@ -86,8 +101,8 @@ The repository now contains the first complete architectural slice of the autono
 - deterministic agent-system generation;
 - durable JSON build-state records;
 - MCP tool/resource surface;
-- Docker image and CI workflow.
+- Streamable HTTP MCP server;
+- Docker image and CI workflow;
+- deployment configuration for Railway.
 
-The remaining production-hardening work is intentionally separated from this core: authenticated remote GitHub
-write operations, isolated sandbox execution, richer persistent storage, deployment adapters, approval workflows,
-full end-to-end verification and operational observability.
+The next engineering layer is production hardening of remote GitHub write operations, sandbox isolation, richer persistence, approval workflows and full end-to-end verification against the target MCP host. Those capabilities must be implemented and verified rather than merely described before production claims are made.
