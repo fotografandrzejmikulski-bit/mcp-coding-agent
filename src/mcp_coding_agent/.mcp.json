@@ -1,0 +1,7 @@
+{
+  "name": "mcp-coding-agent",
+  "version": "1.0.0",
+  "transport": "streamable-http",
+  "endpoint": "/mcp",
+  "healthcheck": "/health"
+}
