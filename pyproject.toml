@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-coding-agent"
-version = "1.0.0"
+version = "1.0.1"
 description = "Autonomous AI coding and multi-agent system builder exposed through MCP"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,10 +13,12 @@ dependencies = [
     "openai-agents>=0.6,<1",
     "pydantic>=2,<3",
     "python-dotenv>=1,<2",
+    "uvicorn>=0.30,<1",
 ]
 
 [project.scripts]
 mcp-coding-agent = "mcp_coding_agent.server:main"
+mcp-coding-agent-cli = "mcp_coding_agent.runtime:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_coding_agent"]
