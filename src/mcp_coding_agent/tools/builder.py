@@ -7,9 +7,10 @@ import json
 from agents import Agent, Runner
 from mcp.server.fastmcp import FastMCP
 
-from mcp_coding_agent.core.models import AgentSpec, AgentRole, SystemSpec
+from mcp_coding_agent.core.models import AgentRole, AgentSpec, SystemSpec
 from mcp_coding_agent.core.prompts import BUILDER_SYSTEM_PROMPT
 from mcp_coding_agent.core.validation import validate_system
+from mcp_coding_agent.orchestration.system import create_builder_system
 
 
 def register_builder_tools(server: FastMCP) -> None:
@@ -27,17 +28,21 @@ def register_builder_tools(server: FastMCP) -> None:
 
     @server.tool()
     async def run_builder(task: str, model: str | None = None) -> dict[str, object]:
-        """Run the principal autonomous builder for a complex engineering task.
-
-        This tool orchestrates specialist agents for analysis, architecture, implementation,
-        testing, review, repair, security, and deployment design. It does not implicitly grant
-        filesystem access; execution tools remain separately scoped by workspace.
-        """
+        """Run the principal autonomous builder with specialist delegation."""
         if not task.strip():
             raise ValueError("task cannot be empty")
-        kwargs: dict[str, object] = {"name": "Autonomous Builder", "instructions": BUILDER_SYSTEM_PROMPT}
+        system = create_builder_system()
+        manager = system.manager
         if model:
-            kwargs["model"] = model
-        agent = Agent(**kwargs)
-        result = await Runner.run(agent, task.strip())
-        return {"success": True, "final_output": result.final_output, "last_agent": result.last_agent.name}
+            manager = Agent(
+                name=manager.name,
+                instructions=manager.instructions,
+                tools=manager.tools,
+                model=model,
+            )
+        result = await Runner.run(manager, task.strip())
+        return {
+            "success": True,
+            "final_output": result.final_output,
+            "last_agent": result.last_agent.name,
+        }
