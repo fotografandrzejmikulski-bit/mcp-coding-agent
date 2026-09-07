@@ -15,6 +15,7 @@ from .core.planner import BuildPlanner
 from .mcp_tools import register_execution_tools
 from .orchestration.system import create_builder_system
 from .tools.builder import register_builder_tools
+from .tools.generation import register_generation_tools
 
 load_dotenv()
 
@@ -31,6 +32,7 @@ mcp = FastMCP(
 
 register_execution_tools(mcp)
 register_builder_tools(mcp)
+register_generation_tools(mcp)
 
 
 @mcp.tool()
@@ -79,12 +81,7 @@ def create_build_plan(
         requirements=requirements or [],
         constraints=constraints or [],
         agents=[
-            RuntimeAgentSpec(
-                id=agent_id,
-                name=agent_id,
-                role=role,
-                mission=mission,
-            )
+            RuntimeAgentSpec(id=agent_id, name=agent_id, role=role, mission=mission)
             for agent_id, role, mission in builtins
         ],
     )
@@ -136,7 +133,7 @@ def design_multi_agent_system(
     """Validate and normalize a complete multi-agent system design."""
     raw = json.loads(agents_json)
     if not isinstance(raw, list):
-        raise ValueError("agents_json must be a JSON array")
+        raise ValueError("agents_json must contain a JSON array")
     agents = [AgentSpec(**item) for item in raw]
     spec = SystemSpec(
         name=name,
@@ -184,6 +181,7 @@ def builder_capabilities() -> str:
                 "workspace_scoped_code_editing",
                 "command_execution",
                 "git_inspection",
+                "agent_system_generation",
                 "testing",
                 "debugging_and_repair",
                 "code_review",
