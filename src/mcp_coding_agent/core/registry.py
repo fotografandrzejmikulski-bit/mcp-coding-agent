@@ -19,6 +19,13 @@ class AgentRegistry:
             raise ValueError(f"Agent already registered: {spec.id}")
         self._specs[spec.id] = spec
 
+    def register_many(self, specs: list[AgentSpec]) -> None:
+        ids = [spec.id for spec in specs]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Agent IDs must be unique")
+        for spec in specs:
+            self.register_spec(spec)
+
     def build(self, agent_id: str) -> Agent:
         if agent_id in self._agents:
             return self._agents[agent_id]
@@ -26,14 +33,23 @@ class AgentRegistry:
         agent = Agent(
             name=spec.name,
             instructions=(
+                f"Role: {spec.role.value}.\n"
                 f"Mission: {spec.mission}\n"
                 f"Responsibilities: {', '.join(spec.responsibilities) or 'none'}\n"
-                "Operate only through explicitly provided tools. Verify claims and artifacts before finalizing."
+                f"Declared capabilities: {', '.join(spec.tools) or 'none'}\n"
+                "Operate only within the system's policy. Verify work before claiming completion."
             ),
             model=spec.model,
         )
         self._agents[agent_id] = agent
         return agent
+
+    def build_graph(self) -> dict[str, Agent]:
+        for agent_id in self._specs:
+            self.build(agent_id)
+        for agent_id, spec in self._specs.items():
+            self._agents[agent_id].handoffs = [self._agents[target] for target in spec.handoffs]
+        return dict(self._agents)
 
     def get(self, agent_id: str) -> Agent:
         return self.build(agent_id)
