@@ -26,7 +26,7 @@ def register_execution_tools(server: FastMCP) -> None:
 
     @server.tool()
     def execute_workspace_command(root: str, command: str, timeout: int = 120) -> dict[str, object]:
-        """Execute a controlled command in the project workspace."""
+        """Execute a policy-checked command in the project workspace."""
         return run_command(root, command, timeout)
 
     @server.tool()
@@ -41,14 +41,14 @@ def register_execution_tools(server: FastMCP) -> None:
 
     @server.resource("builder://tool-policy")
     def tool_policy() -> str:
-        """Expose the execution boundary to the MCP client."""
+        """Expose execution boundaries to the MCP client."""
         return json.dumps(
             {
                 "workspace": "explicit-root-only",
                 "filesystem": "path-traversal-protected",
-                "commands": "controlled-subprocess",
-                "credentials": "sensitive OpenAI key removed from child environment",
-                "git": "read-only inspection in current phase",
+                "commands": "allowlist-and-dangerous-pattern-protected",
+                "credentials": "OpenAI/GitHub secrets are not passed to child commands",
+                "git": "read-only in current release",
             },
             indent=2,
         )
