@@ -17,11 +17,16 @@ from mcp_coding_agent.agents.specialists import (
     tester_agent,
 )
 from mcp_coding_agent.core.prompts import BUILDER_SYSTEM_PROMPT
+from mcp_coding_agent.tools.workspace_agent_tools import (
+    read_workspace_file,
+    run_workspace_command,
+    write_workspace_file,
+)
 
 
 @dataclass(slots=True)
 class BuilderSystem:
-    """A manager-style system that retains control while delegating to specialists."""
+    """Manager-style autonomous builder retaining control over specialist delegation."""
 
     manager: Agent
 
@@ -40,6 +45,9 @@ def create_builder_system() -> BuilderSystem:
         name="Agents Builder Orchestrator",
         instructions=BUILDER_SYSTEM_PROMPT,
         tools=[
+            read_workspace_file,
+            write_workspace_file,
+            run_workspace_command,
             architect.as_tool(tool_name="architect", tool_description="Design system architecture and boundaries."),
             planner.as_tool(tool_name="planner", tool_description="Create an implementation plan and acceptance gates."),
             coder.as_tool(tool_name="coder", tool_description="Implement production-quality code."),
