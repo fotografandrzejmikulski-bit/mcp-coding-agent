@@ -10,12 +10,10 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from .agent_builder import AgentSpec, SystemSpec, system_blueprint
-from .core.models import AgentRole, BuildPlan
+from .core.models import AgentRole, SystemSpec as TypedSystemSpec
 from .core.planner import BuildPlanner
-from .core.workspace import Workspace
 from .orchestration.system import create_builder_system
-from .tools.command import run_command
-from .tools.filesystem import read_file, write_file
+from .mcp_tools import register_execution_tools
 
 load_dotenv()
 
@@ -25,10 +23,12 @@ mcp = FastMCP(
         "You are an autonomous principal coding and AI-agent systems builder. "
         "Own complex tasks from requirements to verified completion. Analyze, architect, plan, implement, "
         "test, review, repair, secure, integrate and verify. Build single agents or complete multi-agent systems. "
-        "Use tools deliberately, keep all execution scoped to an explicitly authorized workspace, and never claim "
-        "success without evidence from verification."
+        "Use tools deliberately, keep execution scoped to an explicitly authorized workspace, and never claim "
+        "success without evidence."
     ),
 )
+
+register_execution_tools(mcp)
 
 
 @mcp.tool()
@@ -54,52 +54,39 @@ def inspect_workspace(path: str) -> dict[str, object]:
 
 
 @mcp.tool()
-def read_project_file(root: str, path: str, max_bytes: int = 200_000) -> dict[str, object]:
-    """Read a UTF-8 project file inside the explicit workspace root."""
-    return read_file(root, path, max_bytes)
-
-
-@mcp.tool()
-def write_project_file(root: str, path: str, content: str) -> dict[str, object]:
-    """Write a UTF-8 project file inside the explicit workspace root."""
-    return write_file(root, path, content)
-
-
-@mcp.tool()
-def execute_workspace_command(root: str, command: str, timeout: int = 120) -> dict[str, object]:
-    """Execute one controlled command with the project directory as its working directory."""
-    return run_command(root, command, timeout)
-
-
-@mcp.tool()
 def create_build_plan(
     name: str,
     goal: str,
     requirements: list[str] | None = None,
     constraints: list[str] | None = None,
 ) -> dict[str, object]:
-    """Create a bounded build plan for a software or agent-system project."""
-    roles = [
-        AgentSpec(name="architect", purpose="Define architecture", instructions="Design the system", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="planner", purpose="Plan implementation", instructions="Create a dependency-aware implementation plan", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="coder", purpose="Implement", instructions="Write production code", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="tester", purpose="Verify", instructions="Test implementation", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="security", purpose="Assess security", instructions="Review threats and controls", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="debugger", purpose="Repair failures", instructions="Find root causes and repair regressions", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="reviewer", purpose="Review quality", instructions="Review correctness and maintainability", tools=[], handoffs=[], guardrails=[], model=None),
-        AgentSpec(name="devops", purpose="Deploy", instructions="Define reproducible deployment", tools=[], handoffs=[], guardrails=[], model=None),
+    """Create a deterministic baseline build plan for a software or agent-system project."""
+    builtins = [
+        ("architect", AgentRole.ARCHITECT, "Define architecture"),
+        ("planner", AgentRole.PLANNER, "Plan implementation"),
+        ("coder", AgentRole.CODER, "Implement"),
+        ("tester", AgentRole.TESTER, "Verify"),
+        ("security", AgentRole.SECURITY, "Assess security"),
+        ("debugger", AgentRole.DEBUGGER, "Repair failures"),
+        ("reviewer", AgentRole.REVIEWER, "Review quality"),
+        ("devops", AgentRole.DEVOPS, "Deploy"),
     ]
-    from .core.models import SystemSpec as TypedSystemSpec
-    typed = TypedSystemSpec(name=name, objective=goal, agents=[
-        __import__("mcp_coding_agent.core.models", fromlist=["AgentSpec"]).AgentSpec(
-            id=agent.name,
-            name=agent.name,
-            role=AgentRole.SPECIALIST,
-            mission=agent.purpose,
-        ) for agent in roles
-    ], requirements=requirements or [], constraints=constraints or [])
-    plan = BuildPlanner().create_plan(typed)
-    return plan.model_dump()
+    typed = TypedSystemSpec(
+        name=name,
+        objective=goal,
+        requirements=requirements or [],
+        constraints=constraints or [],
+        agents=[
+            __import__("mcp_coding_agent.core.models", fromlist=["AgentSpec"]).AgentSpec(
+                id=agent_id,
+                name=agent_id,
+                role=role,
+                mission=mission,
+            )
+            for agent_id, role, mission in builtins
+        ],
+    )
+    return BuildPlanner().create_plan(typed).model_dump()
 
 
 @mcp.tool()
@@ -162,7 +149,7 @@ def design_multi_agent_system(
 
 @mcp.tool()
 def get_builder_architecture() -> dict[str, object]:
-    """Return the internal specialist architecture used by the runtime."""
+    """Return the specialist architecture of the runtime."""
     system = create_builder_system()
     return {
         "manager": system.manager.name,
@@ -194,6 +181,7 @@ def builder_capabilities() -> str:
                 "implementation_planning",
                 "workspace_scoped_code_editing",
                 "command_execution",
+                "git_inspection",
                 "testing",
                 "debugging_and_repair",
                 "code_review",
