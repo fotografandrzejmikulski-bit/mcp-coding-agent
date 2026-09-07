@@ -8,6 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -15,6 +16,7 @@ from .agent_builder import AgentSpec, SystemSpec, system_blueprint
 from .core.models import AgentRole, AgentSpec as RuntimeAgentSpec, SystemSpec as TypedSystemSpec
 from .core.planner import BuildPlanner
 from .mcp_tools import register_execution_tools
+from .security import MCPAuthMiddleware
 from .tools.builder import register_builder_tools
 from .tools.generation import register_generation_tools
 from .tools.state import register_state_tools
@@ -217,6 +219,7 @@ def builder_capabilities() -> str:
 
 
 app = mcp.streamable_http_app()
+app.user_middleware.insert(0, Middleware(MCPAuthMiddleware))
 
 
 def main() -> None:
