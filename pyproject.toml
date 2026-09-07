@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-coding-agent"
+version = "0.1.0"
+description = "MCP server foundation for an AI coding agent"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=2,<3",
+    "python-dotenv>=1,<2",
+]
+
+[project.scripts]
+mcp-coding-agent = "mcp_coding_agent.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_coding_agent"]
+
+[tool.ruff]
+line-length = 100
+
+target-version = "py310"
