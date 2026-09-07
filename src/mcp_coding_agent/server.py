@@ -16,6 +16,7 @@ from .mcp_tools import register_execution_tools
 from .orchestration.system import create_builder_system
 from .tools.builder import register_builder_tools
 from .tools.generation import register_generation_tools
+from .tools.state import register_state_tools
 
 load_dotenv()
 
@@ -33,6 +34,7 @@ mcp = FastMCP(
 register_execution_tools(mcp)
 register_builder_tools(mcp)
 register_generation_tools(mcp)
+register_state_tools(mcp)
 
 
 @mcp.tool()
@@ -133,7 +135,7 @@ def design_multi_agent_system(
     """Validate and normalize a complete multi-agent system design."""
     raw = json.loads(agents_json)
     if not isinstance(raw, list):
-        raise ValueError("agents_json must contain a JSON array")
+        raise ValueError("agents_json must be a JSON array")
     agents = [AgentSpec(**item) for item in raw]
     spec = SystemSpec(
         name=name,
@@ -182,6 +184,7 @@ def builder_capabilities() -> str:
                 "command_execution",
                 "git_inspection",
                 "agent_system_generation",
+                "durable_build_state",
                 "testing",
                 "debugging_and_repair",
                 "code_review",
@@ -197,6 +200,8 @@ def builder_capabilities() -> str:
                 "test",
                 "review",
                 "repair",
+                "security",
+                "integrate",
                 "verify",
                 "finalize",
             ],
