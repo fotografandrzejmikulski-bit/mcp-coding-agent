@@ -2,27 +2,64 @@
 
 Autonomous AI engineering system exposed through Model Context Protocol (MCP). The Builder is designed to create production software, individual agents, and complete multi-agent systems.
 
+## What this is
+
+This repository is not a simple chatbot or prompt wrapper. It is the foundation of an **Agents Builder**: a system whose job is to analyze an engineering request, design the required architecture, create or select specialist agents, execute implementation work, validate the result, repair failures, and finalize only when verification evidence exists.
+
 ## Architecture
 
 The runtime uses a manager-style orchestrator with specialist agents for architecture, planning, coding, review, QA, debugging, security, and DevOps. The OpenAI Agents SDK provides the agent runtime and agent-as-tools orchestration; MCP provides interoperability with MCP hosts. citeturn601879search1turn601879search5
 
 ## Core lifecycle
 
-1. Analyze requirements
-2. Design architecture
-3. Decompose into agents and components
-4. Create implementation plan
-5. Implement in an authorized workspace
-6. Run tests
-7. Review and diagnose failures
-8. Repair and regression-test
-9. Run security review
-10. Verify integration
-11. Finalize only with evidence
+```text
+requirements
+   ↓
+analysis
+   ↓
+architecture
+   ↓
+agent decomposition
+   ↓
+implementation plan
+   ↓
+implementation
+   ↓
+tests
+   ↓
+review / diagnosis
+   ↓
+repair
+   ↓
+security review
+   ↓
+integration verification
+   ↓
+finalize
+```
 
-## MCP tools
+The Builder is designed to handle both:
+
+- a single coding agent or specialist;
+- a complete multi-agent system with explicit responsibilities, tools, handoffs, state and verification gates.
+
+## Built-in specialist roles
+
+- System Architect
+- Implementation Planner
+- Senior Coding Agent
+- Code Reviewer
+- QA Engineer
+- Debugging and Repair Agent
+- Security Engineer
+- DevOps Engineer
+
+The architecture deliberately uses **manager-as-controller + agents-as-tools** for global coordination, while the runtime also contains dynamic agent graph materialization for systems defined from typed specifications.
+
+## MCP surface
 
 ### Builder
+
 - `run_builder`
 - `validate_agent_system`
 - `generate_agent_system`
@@ -30,12 +67,14 @@ The runtime uses a manager-style orchestrator with specialist agents for archite
 - `get_build_state`
 
 ### Design
+
 - `create_build_plan`
 - `design_agent`
 - `design_multi_agent_system`
 - `get_builder_architecture`
 
 ### Coding / workspace
+
 - `inspect_workspace`
 - `read_project_file`
 - `write_project_file`
@@ -44,14 +83,15 @@ The runtime uses a manager-style orchestrator with specialist agents for archite
 - `inspect_git_diff`
 
 ### Resources
+
 - `builder://capabilities`
 - `builder://tool-policy`
 
 ## MCP server
 
-The server uses **Streamable HTTP**. The official MCP Python SDK exposes this transport as an ASGI application; the standard endpoint is `/mcp`. A separate `/health` route is provided for deployment health checks. citeturn601879search6
+The server exposes MCP over **Streamable HTTP**. The official MCP Python SDK provides an ASGI application with the standard `/mcp` endpoint, and this project adds `/health` as an unauthenticated deployment health check. citeturn601879search6
 
-Run locally:
+Start locally:
 
 ```bash
 python -m venv .venv
@@ -62,47 +102,95 @@ ruff check src tests
 mcp-coding-agent
 ```
 
-The default local endpoint is:
+Endpoints:
 
 ```text
-http://127.0.0.1:8000/mcp
+MCP:    http://127.0.0.1:8000/mcp
+Health: http://127.0.0.1:8000/health
 ```
 
-Health check:
+For model execution, configure `OPENAI_API_KEY`. The OpenAI Agents SDK documents `openai-agents` as the installation package and `OPENAI_API_KEY` as the default credential source. citeturn601879search0turn601879search8
+
+## Remote MCP authentication
+
+Set `MCP_AUTH_TOKEN` for a remote deployment. When present, requests to `/mcp` must send:
 
 ```text
-http://127.0.0.1:8000/health
+Authorization: Bearer <MCP_AUTH_TOKEN>
 ```
 
-Set `OPENAI_API_KEY` when running the Agents SDK runtime. OpenAI documents `openai-agents` as the installation package and `OPENAI_API_KEY` as the default credential path. citeturn601879search0turn601879search8
+The `/health` endpoint remains reachable without the token so a platform health checker can probe service availability.
 
-## Security boundary
+## Workspace safety
 
-Workspace operations require an explicit project root and prevent path traversal. Command execution is bounded, blocks high-risk binaries, and strips major cloud/API credentials from child-process environments. Production deployment should additionally use isolated containers/sandboxes, narrow command allowlists, secret management, resource limits, authentication, audited write paths, and explicit approval for consequential operations.
+Workspace operations require an explicit project root. Relative paths are resolved and checked so a task cannot escape that root using `..` or symlinks resolved outside the workspace. Command execution is bounded, blocks high-risk binaries, and strips common API/cloud credentials from child processes.
 
-For real code-generation work in isolated environments, the current OpenAI Agents SDK also provides Sandbox Agents and Docker-backed sandbox execution. citeturn601879search2
+For stronger isolation, the OpenAI Agents SDK also provides Sandbox Agents and Docker-backed sandbox execution patterns. citeturn601879search2
 
 ## Deployment
 
-A Dockerfile and `railway.json` are included. The container listens on port `8000` and exposes `/health` for deployment health checks.
+The repository includes:
 
-## Current state
+- `Dockerfile`
+- `railway.json`
+- `Procfile`
+- GitHub Actions CI
 
-The repository contains the core executable architecture of the autonomous Agents Builder:
+The container listens on port `8000`. Railway is configured to use the Dockerfile and `/health` as the service health check.
+
+## Configuration
+
+See `.env.example` for the runtime contract:
+
+```text
+OPENAI_API_KEY
+OPENAI_MODEL
+MCP_HOST
+MCP_PORT
+MCP_AUTH_TOKEN
+BUILDER_MAX_REPAIR_CYCLES
+BUILDER_COMMAND_TIMEOUT
+BUILDER_STATE_DIR
+```
+
+## Validation
+
+CI runs:
+
+```bash
+ruff check src tests
+pytest -q
+```
+
+A local service smoke test is available as:
+
+```bash
+python scripts/smoke_test.py
+```
+
+A live HTTP smoke test must be run while the server is running. The repository is prepared for CI verification, but this ChatGPT session does not have an active checkout/runtime in which to claim that the tests were executed successfully.
+
+## Current implementation status
+
+This repository now contains the executable architectural core of the autonomous Agents Builder and its MCP server:
 
 - typed agent/system contracts;
 - specialist-agent library;
 - manager-style orchestration with agents-as-tools;
 - dynamic agent graph materialization;
-- adaptive planning;
+- adaptive implementation planning;
 - bounded repair loop;
 - workspace-scoped filesystem and command execution;
-- read-only Git inspection;
-- deterministic agent-system generation;
-- durable JSON build-state records;
-- MCP tool/resource surface;
+- Git inspection;
+- portable agent-system generation;
+- durable JSON build state;
+- MCP tools/resources;
 - Streamable HTTP MCP server;
-- Docker image and CI workflow;
-- deployment configuration for Railway.
+- `/health` deployment endpoint;
+- optional Bearer authentication;
+- Docker packaging;
+- Railway deployment configuration;
+- GitHub Actions CI;
+- unit/contract tests and HTTP smoke test.
 
-The next engineering layer is production hardening of remote GitHub write operations, sandbox isolation, richer persistence, approval workflows and full end-to-end verification against the target MCP host. Those capabilities must be implemented and verified rather than merely described before production claims are made.
+Production hardening still belongs behind explicit adapters: isolated container/VM execution for untrusted generated code, richer external persistence, GitHub write operations with dedicated credentials and approvals, deployment-provider adapters, and end-to-end tests against the exact production MCP host.
