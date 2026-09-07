@@ -19,10 +19,11 @@ class AgentRuntimeFactory:
                 model=spec.model,
             )
 
-        # Handoffs are resolved after every agent exists.
         for spec in specs:
-            target_agents = [by_id[target] for target in spec.handoffs]
-            by_id[spec.id].handoffs = target_agents
+            if any(target not in by_id for target in spec.handoffs):
+                missing = sorted(target for target in spec.handoffs if target not in by_id)
+                raise ValueError(f"Unknown handoff targets for {spec.id}: {missing}")
+            by_id[spec.id].handoffs = [by_id[target] for target in spec.handoffs]
         return by_id
 
     @staticmethod
@@ -31,8 +32,8 @@ class AgentRuntimeFactory:
             f"Role: {spec.role.value}.\n"
             f"Mission: {spec.mission}\n"
             f"Responsibilities: {', '.join(spec.responsibilities) or 'none specified'}\n"
-            f"Allowed capability labels: {', '.join(spec.tools) or 'none specified'}\n"
-            "Respect the system's workspace and approval boundaries. Verify work before reporting completion."
+            f"Declared capabilities: {', '.join(spec.tools) or 'none specified'}\n"
+            "Respect workspace, security and approval boundaries. Verify work before claiming completion."
         )
 
 
