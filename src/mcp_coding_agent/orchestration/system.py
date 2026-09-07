@@ -16,6 +16,7 @@ from mcp_coding_agent.agents.specialists import (
     security_agent,
     tester_agent,
 )
+from mcp_coding_agent.core.prompts import BUILDER_SYSTEM_PROMPT
 
 
 @dataclass(slots=True)
@@ -37,16 +38,7 @@ def create_builder_system() -> BuilderSystem:
 
     manager = Agent(
         name="Agents Builder Orchestrator",
-        instructions=(
-            "You are the principal autonomous software and agent-system builder. "
-            "Own the task from requirements through verified completion. Decompose complex requests, "
-            "delegate specialist work, reconcile outputs, maintain explicit state, and never declare success "
-            "without verification. For code changes, inspect the repository before editing, keep changes scoped, "
-            "run tests, diagnose failures, repair them, and re-test. For multi-agent systems, explicitly define "
-            "agent responsibilities, tool contracts, handoffs, state, failure handling, security boundaries, "
-            "observability and deployment. Prefer manager-style orchestration when central control is useful; "
-            "use specialist delegation for deep domain work."
-        ),
+        instructions=BUILDER_SYSTEM_PROMPT,
         tools=[
             architect.as_tool(tool_name="architect", tool_description="Design system architecture and boundaries."),
             planner.as_tool(tool_name="planner", tool_description="Create an implementation plan and acceptance gates."),
